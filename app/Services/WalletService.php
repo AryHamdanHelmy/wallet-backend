@@ -28,7 +28,7 @@ class WalletService
                 'amount'          => $amount,
                 'balance_before'  => $before,
                 'balance_after'   => $before + $amount,
-                'description'     => 'Top-up saldo',
+                'description'     => 'Balance top-up',
             ]);
         });
     }
@@ -37,11 +37,12 @@ class WalletService
         Wallet $sender,
         User $recipient,
         int $amount,
-        ?string $idempotencyKey = null
+        ?string $idempotencyKey = null,
+        ?string $note = null
     ): Transaction {
         $recipientWalletId = $recipient->wallet->id;
 
-        return DB::transaction(function () use ($sender, $recipientWalletId, $amount, $idempotencyKey) {
+        return DB::transaction(function () use ($sender, $recipientWalletId, $amount, $idempotencyKey, $note) {
 
             $wallets = Wallet::whereIn('id', [$sender->id, $recipientWalletId])
                 ->orderBy('id')
@@ -73,7 +74,7 @@ class WalletService
                 'amount'                 => $amount,
                 'balance_before'         => $fromBefore,
                 'balance_after'          => $fromBefore - $amount,
-                'description'            => 'Transfer ke '.$to->user->username,
+                'description'            => $note,
             ]);
 
             Transaction::create([
@@ -85,7 +86,7 @@ class WalletService
                 'amount'                 => $amount,
                 'balance_before'         => $toBefore,
                 'balance_after'          => $toBefore + $amount,
-                'description'            => 'Transfer dari '.$from->user->username,
+                'description'            => $note,
             ]);
 
             return $out;

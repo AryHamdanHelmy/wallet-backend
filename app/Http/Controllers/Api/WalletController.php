@@ -49,6 +49,7 @@ class WalletController extends Controller
             $request->recipientUser(),
             (int) $request->amount,
             $request->idempotency_key,
+            $request->description,
         );
 
         return response()->json([
