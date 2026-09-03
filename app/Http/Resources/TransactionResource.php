@@ -15,8 +15,6 @@ class TransactionResource extends JsonResource
             'type' => $this->type,
             'direction' => $this->direction,
             'amount' => $this->amount,
-            'amount_formatted' => ($this->direction === 'out' ? '-' : '+')
-                . 'Rp' . number_format($this->amount, 0, ',', '.'),
             'balance_after' => $this->balance_after,
             'counterparty' => $this->when(
                 $this->counterparty_wallet_id !== null,
