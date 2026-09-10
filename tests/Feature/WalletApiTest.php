@@ -108,7 +108,7 @@ class WalletApiTest extends TestCase
     public function test_transfer_berhasil_ke_penerima_via_email(): void
     {
         $sender = User::factory()->create();
-        $recipient = User::factory()->create(['email' => 'budi@gmail.com']);
+        $recipient = User::factory()->create(['phone' => '6281298765432']);
 
         app(WalletService::class)->topup($sender->wallet, 100000);
         Sanctum::actingAs($sender);

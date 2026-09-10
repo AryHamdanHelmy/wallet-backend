@@ -12,36 +12,40 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
+    /** PIN default semua user factory. Lolos aturan StrongPin. */
+    public const DEFAULT_PIN = '142857';
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected static ?string $pinHash;
+
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'name' => fake('id_ID')->name(),
             'username' => fake()->unique()->regexify('[a-z]{6}[0-9]{3}'),
-            'email' => fake()->unique()->safeEmail(),
-            'phone' => '08' . fake()->unique()->numerify('##########'),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'email' => null,
+            'phone' => '628' . fake()->unique()->numerify('#########'),
+            'phone_verified_at' => now(),
+            'pin' => static::$pinHash ??= Hash::make(self::DEFAULT_PIN),
+            'pin_failed_attempts' => 0,
+            'pin_locked_until' => null,
             'remember_token' => Str::random(10),
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    /** User dengan PIN tertentu, mis. ->withPin('280619'). */
+    public function withPin(string $pin): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->state(fn () => ['pin' => Hash::make($pin)]);
+    }
+
+    public function withEmail(?string $email = null): static
+    {
+        return $this->state(fn () => ['email' => $email ?? fake()->unique()->safeEmail()]);
+    }
+
+    /** Akun sedang terkunci karena salah PIN. */
+    public function locked(int $minutes = 15): static
+    {
+        return $this->state(fn () => ['pin_locked_until' => now()->addMinutes($minutes)]);
     }
 }
