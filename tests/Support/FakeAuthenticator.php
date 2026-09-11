@@ -24,12 +24,45 @@ class FakeAuthenticator
         private readonly string $rpId = 'localhost',
         public string $origin = 'http://localhost:5174',
     ) {
-        $this->key = openssl_pkey_new([
+        $this->key = self::makeKey();
+        $this->credentialId = random_bytes(32);
+    }
+
+    /**
+     * Kunci baru per perangkat palsu kalau bisa. Di PHP Windows,
+     * openssl_pkey_new() sering gagal karena openssl.cnf tidak ditemukan;
+     * memuat kunci jadi (FALLBACK_KEY) tidak butuh openssl.cnf.
+     *
+     * Aman memakai kunci yang sama untuk beberapa perangkat palsu: yang
+     * membedakan passkey di server adalah credentialId (acak per instance).
+     */
+    private static function makeKey(): \OpenSSLAsymmetricKey
+    {
+        $key = @openssl_pkey_new([
             'private_key_type' => OPENSSL_KEYTYPE_EC,
             'curve_name' => 'prime256v1',
         ]);
-        $this->credentialId = random_bytes(32);
+
+        if ($key instanceof \OpenSSLAsymmetricKey) {
+            return $key;
+        }
+
+        while (openssl_error_string() !== false) {
+            // kosongkan antrean error OpenSSL supaya tidak bocor ke tes lain
+        }
+
+        return openssl_pkey_get_private(self::FALLBACK_KEY)
+            ?: throw new \RuntimeException('OpenSSL tidak bisa memuat kunci tes P-256.');
     }
+
+    /** Kunci P-256 KHUSUS TES. Jangan dipakai di kode aplikasi. */
+    private const FALLBACK_KEY = <<<'PEM'
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgd5dLW9c9U8DiZzi5
+McCg6IaddvjlOXktw8OJX7H2Yz+hRANCAASkslZGwveMjiWkL6gduEJhISNhRggO
+DsJ+elx22KnQAbRqB26Ra6hFLtdiF+4mSQLxgezYCupwJFjsDx2Z9d+p
+-----END PRIVATE KEY-----
+PEM;
 
     /**
      * @param  array  $options  hasil registrationOptions() (publicKey)

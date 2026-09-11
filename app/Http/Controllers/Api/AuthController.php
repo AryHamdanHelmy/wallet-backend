@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\RegisterStartRequest;
 use App\Http\Requests\Auth\RegisterVerifyRequest;
 use App\Models\User;
 use App\Services\PinAuthService;
+use App\Services\RegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -17,6 +18,11 @@ class AuthController extends Controller
 {
     use IssuesAuthTokens;
 
+    /**
+     * Hanya PinAuthService di constructor. RegistrationService diminta per
+     * method, supaya endpoint login tidak ikut bergantung ke rantai OTP
+     * (kalau gateway WhatsApp bermasalah, login tetap jalan).
+     */
     public function __construct(
         private readonly PinAuthService $pinAuth,
     ) {}
@@ -26,7 +32,7 @@ class AuthController extends Controller
     // ------------------------------------------------------------------
 
     /** POST /auth/register — Langkah 1: simpan data sementara + kirim OTP. */
-    public function registerStart(RegisterStartRequest $request): JsonResponse
+    public function registerStart(RegisterStartRequest $request, RegistrationService $registration): JsonResponse
     {
         $data = $registration->start($request->safe()->only(['name', 'phone', 'username', 'pin']));
 
@@ -38,7 +44,7 @@ class AuthController extends Controller
     }
 
     /** POST /auth/register/resend — kirim ulang OTP. */
-    public function registerResend(Request $request): JsonResponse
+    public function registerResend(Request $request, RegistrationService $registration): JsonResponse
     {
         $validated = $request->validate(
             ['registration_id' => ['required', 'uuid']],
@@ -55,7 +61,7 @@ class AuthController extends Controller
     }
 
     /** GET /auth/register/{registrationId} — info sesi untuk halaman OTP. */
-    public function registerSummary(string $registrationId): JsonResponse
+    public function registerSummary(string $registrationId, RegistrationService $registration): JsonResponse
     {
         return response()->json([
             'success' => true,
@@ -64,7 +70,7 @@ class AuthController extends Controller
     }
 
     /** POST /auth/register/verify — Langkah 2: OTP valid -> akun dibuat + token. */
-    public function registerVerify(RegisterVerifyRequest $request): JsonResponse
+    public function registerVerify(RegisterVerifyRequest $request, RegistrationService $registration): JsonResponse
     {
         $user = $registration->complete(
             $request->validated('registration_id'),
