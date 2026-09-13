@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\MidtransWebhookController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PasskeyController;
+use App\Http\Controllers\Api\RateController;
 use App\Http\Controllers\Api\TopupController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\UserSearchController;
 use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\WalletSummaryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -65,6 +71,7 @@ Route::prefix('auth')->group(function () {
 | Throttle sengaja longgar supaya retry beruntun dari gateway tidak kena 429.
 |
 */
+Route::get('/rates', [RateController::class, 'index'])->middleware('throttle:60,1');
 
 Route::post('/midtrans/notification', MidtransWebhookController::class)
     ->middleware('throttle:120,1');
@@ -92,6 +99,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/wallet', [WalletController::class, 'show']);
     Route::get('/transactions', [TransactionController::class, 'index']);
+    Route::get('/wallet/summary', WalletSummaryController::class);
+    Route::get('/contacts/frequent', [ContactController::class, 'frequent']);
+    Route::get('/users/search', UserSearchController::class)->middleware('throttle:30,1');
 
     /*
     | Top-up
@@ -107,6 +117,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('/topups', [TopupController::class, 'store']);
         Route::post('/transfer', [WalletController::class, 'transfer']);
+    });
+
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead'])->whereUuid('id');
+        Route::delete('/{id}', [NotificationController::class, 'destroy'])->whereUuid('id');
+    });
+
+    Route::prefix('account')->group(function () {
+    Route::patch('/profile', [AccountController::class, 'updateProfile']);
+    Route::post('/pin', [AccountController::class, 'updatePin'])->middleware('throttle:5,1');
+    Route::delete('/sessions', [AccountController::class, 'revokeOtherSessions']);
     });
 });
 
