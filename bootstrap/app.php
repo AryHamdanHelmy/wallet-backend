@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\InsufficientBalanceException;
+use App\Services\Payment\PaymentGatewayException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
@@ -48,6 +49,15 @@ return Application::configure(basePath: dirname(__DIR__))
                     'success' => false,
                     'message' => $e->getMessage(),
                 ], 400);
+            }
+        });
+
+        $exceptions->render(function (PaymentGatewayException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 503);
             }
         });
 
